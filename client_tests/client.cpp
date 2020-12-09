@@ -26,12 +26,12 @@
 
 _openssl_BN r, s, t, u, v, w, tempt, tempt2, I, A, B, X, H, g0, r0, r1, e;
 _openssl_BN ALPAi_1, OMEGAi_1, ALPA_OMEGA, y, h, r_1;
-_openssl_BN Ai, Bi, ALPAi, OMEGAi, ri, g1, g2, g0_s, g1_s, g2_s;
+_openssl_BN Ai, Bi, ALPAi, OMEGAi, ri, g1, g2, g0_s, g1_s, g2_s, arrs_A_test;
 _openssl_BN q, p, g, ss = 2;
 
 _openssl_BN arrs[50000];	//DB값 들어오는 부분
 _openssl_BN arrs_A[50000];	//Ai부분
-_openssl_BN arrs_2[50000];	//빵꾸내서 해쉬해서 곱해주는 부분 => Bi
+_openssl_BN arrs_B[50000];	//빵꾸내서 해쉬해서 곱해주는 부분 => Bi
 _openssl_BN arrs_3[50000];	//추가로 더 달아서 테스트 방지하는부분 => 알파i
 _openssl_BN arrs_4[50000];	//오메가i부분
 _openssl_BN random_r[50000];
@@ -118,17 +118,76 @@ _openssl_BN *TwoProver(_openssl_BN p, _openssl_BN g0, _openssl_BN g1, _openssl_B
 	return arr_pi;
 }
 
+std::string str1, str2, str3, str4, str5, str6;
+_openssl_BN v0, v1, eq_tmp, eq_tmp2;
+
 _openssl_BN EqualVerifer(_openssl_BN p, _openssl_BN g0, _openssl_BN g1, _openssl_BN q, _openssl_BN y0, _openssl_BN y1) {
+	str1 = p._bn2hex();
+	str2 = y0._bn2hex();
+	str3 = y1._bn2hex();
+	str4 = arrs_pi_s[0]._bn2hex();	//beta0, pi
+	str5 = arrs_pi_s[1]._bn2hex();	//beta1, pi
+	str6 = str1 + str2 + str3 + str4 + str5;
+	str6 = sha256(str6);
+	const char *cstr = str6.c_str();
+	e._hex2bn(cstr);
+
+	eq_tmp = g0._exp(arrs_pi_s[2], p);	//arrs_pi_s[2] = z
+	eq_tmp2 = y0._exp(e, p);
+	v0 = eq_tmp._mul(eq_tmp2, p);
+	eq_tmp = g1._exp(arrs_pi_s[2], p);
+	eq_tmp2 = y1._exp(e, p);
+	v1 = eq_tmp._mul(eq_tmp2, p);
+
+	if (arrs_pi_s[0] == v0 && arrs_pi_s[1] == v1) {
+		std::cout << "성공입니당" << std::endl;
+		return 1;
+	}
+	else {
+		std::cout << "아닙니당" << std::endl;
+		return 0;
+	}
 
 
-	return 1;
 }
-int Client_Tesk() {
+void Client_Tesk() {
+	std::cout << "Let's start this function" << std::endl;
+
+
+
+	
 	EqualVerifer(p, g1, arrs_3[0], q, S, arrs_beta[0]);
+	_openssl_BN temped, arr_k[50000], arr_C[50000], results_I[50000];
+
+	
 
 
+	// Line 11 ~ 12
+	for (int i = 0; i < 50000; i++) {	//50000까지로 변경해야함 
+		temped = S._inv(p);
+		temped = S._exp(random_r[i], p);
+		arr_k[i] = arrs_beta[i]._mul(temped, p);
 
-	return 1;
+		str1 = arr_k[i]._bn2hex();
+		str2 = arrs_A[i]._bn2hex();
+		str3 = arrs[i]._bn2hex();
+		str4 = str1 + str2 + str3;
+		str4 = sha256(str4);
+		const char *cstr = str4.c_str();
+		arr_C[i]._hex2bn(cstr);
+	}
+
+	// Line 13 ~ 14
+	for (int i = 0; i <  50000; i++) {	//50000까지로 변경해야함
+		for (int j = 0; j < 100000; j++) {	//100000까지로 변경해야함
+			if (arr_C[i] == arrs_U[j]) {
+				results_I[i] = arrs[i];
+				std::cout << results_I[i]._bn2hex() << std::endl;
+			}
+		}
+	}
+	
+
 }
 
 
@@ -141,12 +200,13 @@ int main(int argc, char** argv) {
 	using std::cout;
 	using std::endl;
 
+	/*
 	_openssl_BN hello = 11, hihi = 5, world = 3;
 	world._expInplace(hihi, hello);	//g^q
 	cout << world._bn2hex() << endl;
 	world._add(world, hello);
 	cout << world._bn2hex() << endl;
-
+	*/
 
 	///< generate a prime of lenght lambda
 	std::cout << "3. ## Prime generation ##" << std::endl;
@@ -158,22 +218,11 @@ int main(int argc, char** argv) {
 	int len = 0, lambda = 1023, count = 0;
 
 	
-	
-	
-	//p._dec2bn("137810082129700670958778866848295504451699734039353360202710387443587327342875400422475959158057347442048038407822456271232696468302500654220738985813341079812485605645754770364147594163556163677093685709074577613099543447780830000604663660477841153537150626717522803363128452501633760705296806200110441977947");
-	//q._dec2bn("68905041064850335479389433424147752225849867019676680101355193721793663671437700211237979579028673721024019203911228135616348234151250327110369492906670539906242802822877385182073797081778081838546842854537288806549771723890415000302331830238920576768575313358761401681564226250816880352648403100055220988973");
-	
-	//cout << p._bn2hex() << endl;
-	//cout << q._bn2hex() << endl;
 	q._randomInplace(lambda);	//소수 q를 뽑는다.
-	//while (true) {
-		//if (r._isPrime()) break;
-		r._randomInplace(2000);
-	//}
+	r._randomInplace(2000);
+
 	
 
-		//////////////////======/////////////
-	
 
 
 
@@ -181,16 +230,12 @@ int main(int argc, char** argv) {
 	
 	while (true) {
 		if (q._isPrime()) {
-			//q._mulInplace(ss, p);	//ss = 2, < this = this * x mod p (x = 왼, p= 오)
-			//q = q._add(c, p);	//c = 1, < return this + x mod p (x = 왼, p = 오)
 			
 
 			v = q;
-			//q._mulInplace(ss, r);
 			v._mulInplace(ss, r);	//2*q
 
 			w = v._add(c, r);	//2*q +1
-			//cout << w._bn2hex() << endl;	//p값
 
 
 			cout << "wait.." << endl;
@@ -201,12 +246,10 @@ int main(int argc, char** argv) {
 		}
 		q._randomInplace(lambda);
 	}
-	//q = v;
 	p = w;
 	cout << "/////////" << endl;
 	cout << q._bn2hex() << endl;	//q값
 	cout << "/////////" << endl;
-	//q = q._add(c, q);	//c = 1, < return this + x mod p (x = 왼, p = 오)
 	cout << p._bn2hex() << endl;	//p값
 	cout << "==============" << endl;
 	
@@ -237,7 +280,6 @@ int main(int argc, char** argv) {
 			}
 		}
 		g._randomInplace(p);	//p범위 내에 있는 랜덤수 뽑기
-		//g = rand() % 10000000;
 	}
 
 	cout << "/////////" << endl;
@@ -256,7 +298,7 @@ int main(int argc, char** argv) {
 	MYSQL_RES *res;
 	conn = mysql_init(0);
 
-	conn = mysql_real_connect(conn, "localhost", "root", "wndkdi123", "testdb_client", 3308, NULL, 0);
+	conn = mysql_real_connect(conn, "localhost", "root", "wndkdi123", "_privatesetx", 3308, NULL, 0);
 
 	_openssl_BN H_1, NUM = 1, H_test;
 	char* tests;
@@ -270,13 +312,13 @@ int main(int argc, char** argv) {
 	if (conn) {
 		puts("Successful connection to database!");
 
-		std::string query = "SELECT * FROM test";
+		std::string query = "SELECT * FROM _privatesetx";
 		const char* Q = query.c_str();
 		qstate = mysql_query(conn, Q);
 		if (!qstate) {
 			res = mysql_store_result(conn);
 			while (row = mysql_fetch_row(res)) {
-				//printf("ID: %s, Name: %s, Value: %s\n", row[0], row[1], row[2]);
+				printf("ID: %s, Name: %s, Value: %s\n", row[0], row[1], row[2]);
 
 				//첫번째 요소를 가지고,,
 				char* tests_1 = row[0];	//tests_1 -> x
@@ -305,7 +347,6 @@ int main(int argc, char** argv) {
 	else {
 		puts("Connection to database has falied!");
 	}
-	printf("the end!! \n");
 
 	/*
 	//할당된 메모리 해제
@@ -315,37 +356,32 @@ int main(int argc, char** argv) {
 
 
 	/////////////////////////////////////////
-	/*
-	Algorithm  Client(x)
-	3~5번째줄
-	*/
 	
 
 	conn = mysql_init(0);
 
-	conn = mysql_real_connect(conn, "localhost", "root", "wndkdi123", "testdb_client", 3308, NULL, 0);
-	//testdb
+	conn = mysql_real_connect(conn, "localhost", "root", "wndkdi123", "_privatesetx", 3308, NULL, 0);
+
 
 	//Line 2
 	//H = g._exp(X, p);	//H = g^x (mod p)
 
 	int el = 0;
 
+	
+	_openssl_BN ran_r;
+	ran_r._randomInplace(q);
+	g0 = g._exp(ran_r, p);
+	//g0_s = g0._exp(r, p);
+	B = NUM._mul(g0, p);	//B = NUM * g0 (mod p)	<NUM == A>
 
-	_openssl_BN tests_g;
-	tests_g._randomInplace(q);
-	g0 = g._exp(tests_g, p);
-	g0_s = g0._exp(r, p);
-	B = NUM._mul(g0_s, p);	//B = NUM * g0 (mod p)	<NUM == A>
-
+	
 	int length = int(row);
-	std::cout << "&&** row의 수" << std::endl;
-	std::cout << length << std::endl;
 	//Line 3~5
 	if (conn) {
-		puts("Successful connection to database!");
+		//puts("Successful connection to database!");
 
-		std::string query = "SELECT * FROM test";
+		std::string query = "SELECT * FROM _privatesetx";
 		const char* Q = query.c_str();
 		qstate = mysql_query(conn, Q);
 		if (!qstate) {
@@ -353,151 +389,67 @@ int main(int argc, char** argv) {
 			while (row = mysql_fetch_row(res)) {
 				char* tests_1 = row[0];	//tests_1 -> x
 
-
-
-
-				/*
-				res = mysql_store_result(conn);
-				while (row = mysql_fetch_row(res)) {
-					
-					char* tests_1 = row[0];	//tests_1 -> x
-					if (tests_test != tests_1) {	//빵꾸내는 부분
-
-						//std::cout << tests_1 << std::endl;
-
-						// A에 H1(X) 들을 넣고 곱해서 mod p
-						H_test._hex2bn(tests_1);
-						Ai = g._exp(H_test, p);	//Ai = g^x (mod p) <해쉬처리>
-						
-
-
-						//Ai = Ai._inv(p);	//Ai^-1
-						//Bi = NUM._mul(Ai, p);	//NUM(A) / Ai
-						//arr[el] = Ai;
-						//Ai_mul은 임시 저장공간 (곱하는것을)
-						Ai_mul = Ai_mul._mul(Ai, p);
-
-						
-					}
-
-				}
-
-				*/
-
-
-				H_test._hex2bn(tests_1);
+				H_test._hex2bn(tests_1);	//H_test는 x시리즈이다. (xi이다.)
 				arrs[el] = H_test;
-				printf("db내용\n");
-				cout << el << endl;
-				cout << arrs[el]._bn2hex() << endl;
-
+				//printf("db내용\n");
+				//cout << el << endl;
+				//cout << arrs[el]._bn2hex() << endl;
 
 				el++;
-
 			}
-
-
-
-
-
-
-
-
-		
 		}
 		printf("the end!! \n");
-
-
 	}
+	
 
 
-
-	/*
-	for (int i = 0; i < 50000; i++) {
-		cout << arrs[i]._bn2hex() << endl;
-		cout << "hello" << endl;
-	}
-	*/
 
 	cout << "곱하고 빵꾸내는 부분" << endl;
 	for (int i = 0; i < 50000; i++) {
+		
 		arrs_A[i] = g._exp(arrs[i], p);	//Ai = g^x (mod p) <해쉬처리>
 
 		if (arrs[i] == NULL) break;
-		arrs_2[i] = 1;
-		for (int j = 0; j < 50000; j++) {
-			if (i != j) {	//빵꾸내는 부분이 아니라면 해쉬를 하고 곱해준다.
-				
-				if (arrs[j] == NULL) break;
-				Ai = g._exp(arrs[j], p);	//Ai = g^x (mod p) <해쉬처리>
-				arrs_2[i] = arrs_2[i]._mul(Ai, p);
-			}
+		arrs_B[i] = 1;	//Bi부분
 
-		}
-		//Bi (arrs_2)	빵꾸내는부분
-		cout << arrs_2[i]._bn2hex() << endl;
+		arrs_A_test = arrs_A[i]._inv(p);
+		arrs_B[i] = NUM._mul(arrs_A_test, p);
+
+		//Bi 빵꾸내는부분
+		cout << "Bi" << endl;
+		cout << arrs_B[i]._bn2hex() << endl;
 
 		//알파i (arrs_3)
 		//랜덤값 r을 뽑아준다.	(g1을 위하여)
 		random_r[i]._randomInplace(q);
 		
-		tests_g._randomInplace(q);
-		g1 = g._exp(tests_g, p);
-		g1_s = g1._exp(random_r[i], p);	//g^ri
-		arrs_3[i] = arrs_A[i]._mul(g1_s, p);	//Ai * gi
+		//tests_g._randomInplace(q);
+		g1 = g._exp(random_r[i], p);
+		arrs_3[i] = arrs_A[i]._mul(g1, p);	//Ai * gi
 		cout << "알파" << endl;
 		cout << arrs_3[i]._bn2hex() << endl;
 
 		//오메가i부분 (arrs_4)
 		//랜덤값 r을 뽑아준다.	(g2를 위하여)
-		//ri._randomInplace(q);
-		tests_g._randomInplace(q);
-		g2 = g._exp(tests_g, p);
-		g2_s = g2._exp(random_r[i], p);	//g2^ri
-		arrs_4[i] = arrs_2[i]._mul(g2, p);	//Bi * g2
+		g2 = g._exp(random_r[i], p);
+		arrs_4[i] = arrs_B[i]._mul(g2, p);	//Bi * g2
 		cout << "오메가" << endl;
 		cout << arrs_4[i]._bn2hex() << endl;
 
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-	//cout << "g1값이 궁금해잉" << endl;
-	//cout << g1._bn2hex() << endl;
-
 	std::cout << "**====**====**====**" << std::endl;
 
 	_openssl_BN x0, x1, g_0, g_1;
 	
-	//TwoProver(p, g0, h, q, r, -r, y)
-	//x0, x1
-	//x0._randomInplace(q);
-	//x1._randomInplace(q);
-
-	//y	(y = (g0^x0 * g1^x1)(mod p))
-	//g_0 = g0._exp(x0, p);
-	//g_1 = g1._exp(x1, p);
-	//y = g_0._mul(g_1, p);
-	
-
-	//y = B * arrs_3[0]^-1 * arrs_4[0]^-1 
 	_openssl_BN alpa1, omega1;
 	alpa1 = arrs_3[0]._inv(p);
 	omega1 = arrs_4[0]._inv(p);
 	alpa1 = alpa1._mul(omega1, p);
 	y = B._mul(alpa1, p);
 
-	//h = (g1 * g2) (mod p)
-	h = g1._mul(g2, p);
+	h = g1._mul(g2, p);	//h = (g1 * g2) (mod p)
 
 	_openssl_BN _r;
 	_r = random_r[0]._mul(-1, p);
@@ -556,88 +508,6 @@ int main(int argc, char** argv) {
 
 
 
-	//RECEIVE MESSAGES FROM SERVER - THREAD 02
-	std::thread receiver([=,&connection_socket, &is_connected]() {
-		//STORE RECEIVED MESSAGE INSIDE THIS BUFFER
-		char buffer[1024];
-		char* temp;
-
-		std::string str_tests;
-		int S_counts = 1;
-		std::string hi = "hi";
-
-		while (S_counts) {
-			//for (int i = 0; i < connection_socket; i++) {
-				//if (is_connected == true) {
-					//RESET BUFFER EVERY TIME
-					memset(buffer, 0, sizeof(buffer));
-					//IF MESSAGE RECEIVED IS LONGER THEN ONE BYTE, PRINT IT OUT
-					//if (recv(connection_socket, buffer, sizeof(buffer), 0) >= 1) {
-
-					
-						temp = strdup(buffer);
-						if (strlen(temp) > 1) {
-							//cout << temp << endl;
-							str_tests = str_tests + temp;
-							if (str_tests.find(hi) != std::string::npos) {
-								cout << "i found!!" << endl;
-								S_counts = 0;
-							}
-						}
-						
-					//}
-				//}
-
-
-				//SLEEP FOR 1S IF NOT CONNECTED
-				//else std::this_thread::sleep_for(std::chrono::seconds(1));
-			//}
-		}
-	
-		cout << "============" << endl;
-		cout << str_tests << endl;
-	
-		
-		int in_256 = 256;
-		int in_a = 0;
-		
-		//S받아오는 부분
-		std::string sub1 = str_tests.substr(0, 256);
-		cout << sub1 << endl;
-		S._hex2bn(sub1.c_str());
-
-		//beta시리즈 받아오는 부분
-		for (int i = 0; i < 3; i++) {	//큰 db쓸 경우 100000까지 받아야함!
-
-			in_a += in_256;
-			sub1 = str_tests.substr(in_a, 256);
-			cout << sub1 << endl;
-			arrs_beta[i]._hex2bn(sub1.c_str());
-		}
-	
-		//U시리즈 받아오는 부분
-		for (int i = 0; i < 3; i++) {	//큰 db쓸 경우 50000까지 받아야함!
-
-			in_a += in_256;
-			sub1 = str_tests.substr(in_a, 256);
-			cout << sub1 << endl;
-			arrs_U[i]._hex2bn(sub1.c_str());
-		}
-
-		//파이 받아오는 부분
-		for (int i = 0; i < 3; i++) {	//큰 db쓸 경우 50000까지 받아야함!
-
-			in_a += in_256;
-			sub1 = str_tests.substr(in_a, 256);
-			cout << sub1 << endl;
-			arrs_pi_s[i]._hex2bn(sub1.c_str());
-		}
-	
-		Client_Tesk();
-	
-	
-	
-	});
 
 
 
@@ -668,6 +538,7 @@ int main(int argc, char** argv) {
 
 	int counts = 0;
 	int couns_2 = 1;
+	int lss = 1;
 
 	while (true) {
 		///////
@@ -676,172 +547,158 @@ int main(int argc, char** argv) {
 
 			if (conn) {
 				while (couns_2) {
-					//std::string query = "SELECT * FROM test";
-					//const char* q = query.c_str();
-					//qstate = mysql_query(conn, q);
-
-					//int ij = 1;
-					//if (ij) {
-						//res = mysql_store_result(conn);
-						//msg_1 = p._bn2hex();
-
-					//msg_p = msg_p + "*";
-						send(connection_socket, msg_p.c_str(), msg_p.size(), 0);	//p값 서버로 전달
-						cout << msg_p.c_str() << endl;
-
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						//msg_q = msg_q + "*";
-						send(connection_socket, msg_q.c_str(), msg_q.size(), 0);	//q값 서버로 전달
-						cout << msg_q.c_str() << endl;
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						//msg_g = msg_g + "*";
-						send(connection_socket, msg_g.c_str(), msg_g.size(), 0);	//g값 서버로 전달
-						cout << msg_g.c_str() << endl;
-						//msg_g0 = msg_g0 + "*";
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						send(connection_socket, msg_g0.c_str(), msg_g0.size(), 0);	//g0값 서버로 전달
-						cout << msg_g0.c_str() << endl;
-						//msg_g1 = msg_g1 + "*";
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						send(connection_socket, msg_g1.c_str(), msg_g1.size(), 0);	//g1값 서버로 전달
-						cout << msg_g1.c_str() << endl;
-						//msg_g2 = msg_g2 + "*";
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						send(connection_socket, msg_g2.c_str(), msg_g2.size(), 0);	//g2값 서버로 전달
-						cout << msg_g2.c_str() << endl;
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
+					send(connection_socket, msg_p.c_str(), msg_p.size(), 0);	//p값 서버로 전달
+					cout << msg_p.c_str() << endl;
+					send(connection_socket, msg_q.c_str(), msg_q.size(), 0);	//q값 서버로 전달
+					cout << msg_q.c_str() << endl;
+					send(connection_socket, msg_g.c_str(), msg_g.size(), 0);	//g값 서버로 전달
+					cout << msg_g.c_str() << endl;
+					send(connection_socket, msg_g0.c_str(), msg_g0.size(), 0);	//g0값 서버로 전달
+					cout << msg_g0.c_str() << endl;
+					send(connection_socket, msg_g1.c_str(), msg_g1.size(), 0);	//g1값 서버로 전달
+					cout << msg_g1.c_str() << endl;
+					send(connection_socket, msg_g2.c_str(), msg_g2.size(), 0);	//g2값 서버로 전달
+					cout << msg_g2.c_str() << endl;
 
 
-						/*
-						while (row = mysql_fetch_row(res)) {   //한 row씩 얻어온다
-
-							printf("%s\n", row[0]);
-							msg_1 = row[0];
-							send(connection_socket, msg_1.c_str(), msg_1.size() + 1, 0);
-
-						}
-						*/
-
-						//send(connection_socket, (char *)testsss2, sizeof(testsss2), 0);	//g값 서버로 전달
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-
-						cout << "전송" << endl;
-
-						//std::string msgs;
-						//msgs = arrs[0]._bn2hex();
-						//cout << arrs[0]._bn2hex() << endl;
-
-						/*
-						std::string test_send;
-						for (int k = 0; k < 50000; k++) {
-							test_send = arrs[k]._bn2hex();
-							send(connection_socket, test_send.c_str(), test_send.size() + 1, 0);	//g값 서버로 전달
-							std::this_thread::sleep_for(std::chrono::seconds(1));
-						}
-						*/
+					cout << "전송" << endl;
 
 
-						
-						//std::this_thread::sleep_for(std::chrono::seconds(1));
-						
+					std::string test_send;
 
+					//B보내는 부분
+					//cout << "B 보내는 부분" << endl;
+					test_send = B._bn2hex();
+					send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
+					//cout << test_send.c_str() << endl;
+					//std::this_thread::sleep_for(std::chrono::seconds(1));
 
-						/*
-						std::string msgs_2;
-						msgs_2 = arrs[2]._bn2hex();
-						cout << arrs[2]._bn2hex() << endl;
-						send(connection_socket, msgs_2.c_str(), msgs_2.size() + 1, 0);	//g값 서버로 전달
-						std::this_thread::sleep_for(std::chrono::seconds(1));
-						*/
-						
-							/*
-						//곱하고 빵꾸내는 부분
-						for (int i = 0; i < 50000; i++) {
-
-							
-							if (arrs[i] == NULL) break;
-
-							for (int j = 0; j < 50000; j++) {
-								if (i != j) {	//i와 j가 같은 인덱스를 가진 배열 부분은 빵꾸낸다.
-									if (arrs[2499] != NULL) {	//arrs 배열 사용하는 부분
-										// A에 H1(X) 들을 넣고 곱해서 mod p
-
-										Ai = g._exp(arrs[j], p);	//Ai = g^x (mod p) <해쉬처리>
-										Ai_mul = Ai_mul._mul(Ai, p);	//내용을 누적시켜서 넣어준다. (빵꾸 뚫린 상태로)
-
-									}
-									else {	//arrs_2 배열 사용하는 부분
-										int s = j - 2500;
-										Ai = g._exp(arrs_2[s], p);	//Ai = g^x (mod p) <해쉬처리>
-										Ai_mul = Ai_mul._mul(Ai, p);
-									}
-								}
-
-							}
-							Ai = 1;
-							Ai_mul = 1;
-
-
-							send(connection_socket, msg_g.c_str(), msg_g.size() + 1, 0);	//g값 서버로 전달
-							std::this_thread::sleep_for(std::chrono::seconds(1));
-							
-
-
-						}
-						*/
-						std::string test_send;
-
-						//B보내는 부분
-						cout << "B 보내는 부분" << endl;
-						test_send = B._bn2hex();
+					//알파 보내는 부분
+					//알파i (arrs_3)
+					//cout << "알파 보내는 부분" << endl;
+					for (int i = 0; i < 50000; i++) {
+						if (arrs_3[i] == NULL) break;
+						test_send = arrs_3[i]._bn2hex();
+						//cout << test_send.c_str() << endl;
 						send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
-						cout << test_send.c_str() << endl;
 						//std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
 
-						//알파 보내는 부분
-						//알파i (arrs_3)
-						cout << "알파 보내는 부분" << endl;
-						for (int i = 0; i < 50000; i++) {
-							if (arrs_3[i] == NULL) break;
-							test_send = arrs_3[i]._bn2hex();
-							cout << test_send.c_str() << endl;
-							send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
-							//std::this_thread::sleep_for(std::chrono::seconds(1));
-						}
+					//오메가 보내는 부분
+					//오메가i (arrs_4)
+					//cout << "오메가 보내는 부분" << endl;
+					for (int i = 0; i < 50000; i++) {
+						if (arrs_4[i] == NULL) break;
+						test_send = arrs_4[i]._bn2hex();
+						//cout << test_send.c_str() << endl;
+						send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
+						//std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
 
-						//오메가 보내는 부분
-						//오메가i (arrs_4)
-						cout << "오메가 보내는 부분" << endl;
-						for (int i = 0; i < 50000; i++) {
-							if (arrs_4[i] == NULL) break;
-							test_send = arrs_4[i]._bn2hex();
-							cout << test_send.c_str() << endl;
-							send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
-							//std::this_thread::sleep_for(std::chrono::seconds(1));
-						}
-
-						//파이c보내는 부분
-						cout << "파이c보내는 부분" << endl;
-						for (int i = 0; i < 3; i++) {
-							test_send = arr_pi[i]._bn2hex();
-							cout << test_send.c_str() << endl;
-							send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
-							//std::this_thread::sleep_for(std::chrono::seconds(1));
-						}
+					//파이c보내는 부분
+					//cout << "파이c보내는 부분" << endl;
+					for (int i = 0; i < 3; i++) {
+						test_send = arr_pi[i]._bn2hex();
+						//cout << test_send.c_str() << endl;
+						send(connection_socket, test_send.c_str(), test_send.size() , 0);	//g값 서버로 전달
+						//std::this_thread::sleep_for(std::chrono::seconds(1));
+					}
 						
-						std::this_thread::sleep_for(std::chrono::seconds(1));
-						test_send = "hi";
+					//std::this_thread::sleep_for(std::chrono::seconds(1));
+					test_send = "hi";
 
-						send(connection_socket, test_send.c_str(), test_send.size(), 0);
-						std::this_thread::sleep_for(std::chrono::seconds(1));
-
-
+					send(connection_socket, test_send.c_str(), test_send.size(), 0);
+					//std::this_thread::sleep_for(std::chrono::seconds(1));
 
 
-						//ij = 0;
-					//}
+					
 
-					couns_2 = 0;
+
+					//////////////////////////////////////////////
+
+
+					char buffer[1024];
+					char* temp;
+
+					std::string str_tests;
+					int S_counts = 1;
+					std::string hi = "hi";
+					int jj = 1;
+
+					while (jj == 1) {
+						//RESET BUFFER EVERY TIME
+						memset(buffer, 0, sizeof(buffer));
+						//IF MESSAGE RECEIVED IS LONGER THEN ONE BYTE, PRINT IT OUT
+						if (recv(connection_socket, buffer, sizeof(buffer), 0) >= 1) {
+							//cout << "hello world" << endl;
+
+							temp = strdup(buffer);
+							str_tests = str_tests + temp;
+							//cout << temp << endl;
+
+							if (str_tests.find(hi) != std::string::npos) {
+								cout << "i found!!" << endl;
+								jj = 0;
+							}
+						}
+					}
+
+					if (jj == 0) {
+						cout << "============" << endl;
+						cout << str_tests << endl;
+
+
+						int in_256 = 256;
+						int in_64 = 64;
+						int in_a = 0;
+
+						//S받아오는 부분
+						cout << "S 받아온 부분" << endl;
+						std::string sub1 = str_tests.substr(0, 256);
+						cout << sub1 << endl;
+						S._hex2bn(sub1.c_str());
+
+						//beta시리즈 받아오는 부분
+						cout << "beta시리즈 받아온 부분" << endl;
+						for (int i = 0; i < 100000; i++) {	//큰 db쓸 경우 100000까지 받아야함!
+
+							in_a += in_256;
+							sub1 = str_tests.substr(in_a, 256);
+							cout << sub1 << endl;
+							arrs_beta[i]._hex2bn(sub1.c_str());
+						}
+
+						//U시리즈 받아오는 부분
+						cout << "U시리즈 받아온 부분" << endl;
+						for (int i = 0; i < 50000; i++) {	//큰 db쓸 경우 50000까지 받아야함!
+
+							in_a += in_64;
+							sub1 = str_tests.substr(in_a, 64);
+							cout << sub1 << endl;
+							arrs_U[i]._hex2bn(sub1.c_str());
+						}
+
+						//파이 받아오는 부분
+						cout << "pi시리즈 받아온 부분" << endl;
+						for (int i = 0; i < 3; i++) {
+
+							in_a += in_256;
+							sub1 = str_tests.substr(in_a, 256);
+							cout << sub1 << endl;
+							arrs_pi_s[i]._hex2bn(sub1.c_str());
+						}
+
+						cout << "go to client_tesk function" << endl;
+
+						Client_Tesk();
+						lss = 0;
+
+
+
+
+						couns_2 = 0;
+					}
+					
 				}
 			}
 
@@ -858,13 +715,41 @@ int main(int argc, char** argv) {
 
 		}
 		//SLEEP FOR 1S IF SOCKET IS NOT CONNECTED
-		else std::this_thread::sleep_for(std::chrono::seconds(1));
+		//else std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
+	
+
+	//RECEIVE MESSAGES FROM SERVER - THREAD 02
+	std::thread receiver([=, &connection_socket, &is_connected]() {
+		//STORE RECEIVED MESSAGE INSIDE THIS BUFFER
+		char buffer[1024];
+		char* temp;
+
+		std::string str_tests;
+		int S_counts = 1;
+		std::string hi = "hi";
+		int jj = 1;
+
+		while (true) {
+			if (is_connected == true) {
+				//RESET BUFFER EVERY TIME
+				memset(buffer, 0, sizeof(buffer));
+				//IF MESSAGE RECEIVED IS LONGER THEN ONE BYTE, PRINT IT OUT
+				if (recv(connection_socket, buffer, sizeof(buffer), 0) > 1)
+					std::cout << buffer << std::endl;
+			}
+			//SLEEP FOR 1S IF NOT CONNECTED
+			else std::this_thread::sleep_for(std::chrono::seconds(1));
+		}});
+
+
+
+	/*
 	closesocket(connection_socket);
 	WSACleanup();
 	quick_exit(0);
-
+	*/
 
 
 	return 0;
